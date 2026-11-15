@@ -1,0 +1,10 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CCTV Kelas</title><link rel="stylesheet" href="/static/style.css"></head><body>
+<header><b>CCTV Monitoring Perhatian Siswa</b><a href="/admin">Admin</a></header><main>
+<div class="video"><img id="v" src="/stream/public" alt=""><div class="off" id="off">Kamera tidak aktif</div></div>
+<div class="card"><div class="t">RATA-RATA SISWA MENGHADAP DEPAN PER MENIT</div><div class="big" id="p">Belum tersedia</div></div></main>
+<script>
+const off=document.getElementById('off'),p=document.getElementById('p');
+function upd(d){off.style.display=d.status==='running'?'none':'grid';
+ const ok=d.status==='running';p.textContent=ok?Number(d.avg_front_per_minute||0).toFixed(1)+' siswa':'Belum tersedia';p.style.fontSize=ok?'56px':'28px'}
+function conn(){const w=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/public');w.onmessage=e=>upd(JSON.parse(e.data));w.onclose=()=>setTimeout(conn,2000)}conn();
+</script></body></html>

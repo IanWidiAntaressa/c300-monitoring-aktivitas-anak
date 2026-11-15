@@ -1,0 +1,40 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin CCTV</title><link rel="stylesheet" href="/static/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script></head><body>
+<header><b>Admin – CCTV Monitoring</b><span><a href="/">Tampilan Guest</a> <button id="lo" onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())" style="display:none">Keluar</button></span></header><main>
+<div id="login" class="card" style="max-width:340px;margin:60px auto"><h3>Login Admin</h3><input id="u" placeholder="Username"><br><input id="pw" type="password" placeholder="Password"><br><button onclick="login()">Masuk</button><div id="err" style="color:#f77"></div></div>
+<div id="app" style="display:none">
+<div class="video"><img id="v"><div class="off" id="off">Kamera tidak aktif</div></div>
+<div class="card"><div class="t">RATA-RATA SISWA MENGHADAP DEPAN PER MENIT</div><div class="big" id="front">–</div><small>Rata-rata jumlah siswa dari sampel pemrosesan pada menit berjalan</small></div>
+<div class="card"><b>Kontrol</b> <span id="st"></span><br>
+<button onclick="ctl('start')">Mulai</button><button onclick="ctl('stop')">Berhenti</button>
+<select id="stype" onchange="sourceTypeChanged()"><option value="webcam" selected>Webcam Laptop</option><option value="mp4">MP4</option><option value="rtsp">RTSP</option></select><input id="sval" value="0" placeholder="Indeks webcam (0), path MP4, atau URL RTSP"><button onclick="setSrc()">Set sumber</button>
+<br>Upload MP4: <input type="file" id="f" accept=".mp4"><button onclick="up()">Upload</button></div>
+<div class="card"><b>Statistik saat ini</b><div class="grid" id="cats"></div></div>
+<div class="card"><b>Grafik (rata-rata per menit)</b><canvas id="ch" height="110"></canvas></div>
+<div class="card"><b>Riwayat</b><br>Dari <input type="date" id="d1"> s/d <input type="date" id="d2"><button onclick="hist()">Filter</button><div style="overflow:auto"><table id="ht"></table></div><b>Sesi rekaman</b><table id="sess"></table></div>
+</div></main>
+<script>
+const N={depan:'Menghadap Depan',belakang:'Menghadap Belakang',kanan:'Menghadap Kanan',kiri:'Menghadap Kiri',menunduk:'Menunduk',tidak_diketahui:'Tidak Diketahui'};
+const K=Object.keys(N),$=i=>document.getElementById(i);let chart,started=false;
+async function api(u,o){const r=await fetch(u,o);if(r.status===401){show(false);throw 0}return r.json()}
+function show(on){$('login').style.display=on?'none':'block';$('app').style.display=on?'block':'none';$('lo').style.display=on?'':'none'}
+async function login(){const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('u').value,password:$('pw').value})});
+ if(r.ok)init();else $('err').textContent='Login gagal'}
+const ctl=a=>api('/api/admin/control/'+a,{method:'POST'});
+function sourceTypeChanged(){const t=$('stype').value;$('sval').value=t==='webcam'?'0':(t==='mp4'?'videos/classroom.mp4':'rtsp://user:password@alamat-ip:554/stream1');$('sval').placeholder=t==='webcam'?'Indeks webcam: 0 (kamera utama), 1 (kamera lain)':(t==='mp4'?'Path video MP4':'URL RTSP kamera IP');}
+const setSrc=async()=>{const t=$('stype').value;const v=$('sval').value.trim();if(!v){alert('Isi sumber kamera/video terlebih dahulu');return;}const r=await api('/api/admin/source',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:t,value:v})});alert('Sumber diubah ke '+(t==='webcam'?'Webcam laptop indeks '+v:t.toUpperCase())+'. Klik Mulai jika pemrosesan belum berjalan.');};
+async function up(){const fd=new FormData();fd.append('file',$('f').files[0]);await api('/api/admin/upload',{method:'POST',body:fd});alert('Terupload & dipilih')}
+function upd(d){$('st').textContent='Status: '+d.status+(d.error?' – '+d.error:'')+' | Total: '+d.total;$('off').style.display=d.status==='running'?'none':'grid';
+ $('front').textContent=d.total?d.avg_front_per_minute.toFixed(1)+' siswa':'Belum tersedia';
+ $('cats').innerHTML=K.map(k=>`<div class="card"><div class="t">${N[k]}</div><div style="text-align:center;font-size:24px">${d.counts[k]} siswa<br>${d.pct[k]==null?'–':d.pct[k]+'%'}</div></div>`).join('')}
+const ts=s=>new Date(s*1000).toLocaleString('id-ID');
+async function hist(){let q='';if($('d1').value)q+='start='+Date.parse($('d1').value)/1000+'&';if($('d2').value)q+='end='+(Date.parse($('d2').value)/1000+86399);
+ const h=await api('/api/admin/history?'+q),m=h.minutes;
+ $('ht').innerHTML='<tr><th>Menit</th><th>Sampel</th><th>Rata2 seluruh siswa</th><th>Rata2 menghadap depan</th>'+K.map(k=>'<th>'+N[k]+' %</th>').join('')+'</tr>'+m.map(r=>`<tr><td>${ts(r.minute_ts)}</td><td>${r.samples}</td><td>${r.avg_total.toFixed(1)}</td><td>${Number(r.avg_front||0).toFixed(1)}</td>`+K.map(k=>`<td>${r['pct_'+k].toFixed(1)}</td>`).join('')+'</tr>').join('');
+ $('sess').innerHTML='<tr><th>Mulai</th><th>Durasi</th><th>Sumber</th></tr>'+h.sessions.map(s=>`<tr><td>${ts(s.start_ts)}</td><td>${s.end_ts?Math.round((s.end_ts-s.start_ts)/60)+' mnt':'berjalan'}</td><td>${s.source}</td></tr>`).join('');
+ const cols=['#7042b8','#8b63c7','#a58bcf','#593193','#c0afd9','#8b8792'];
+ if(chart)chart.destroy();if(window.Chart)chart=new Chart($('ch'),{type:'line',data:{labels:m.map(r=>ts(r.minute_ts)),datasets:K.map((k,i)=>({label:N[k],data:m.map(r=>r['pct_'+k]),borderColor:cols[i],tension:.2}))},options:{scales:{y:{min:0,max:100}}}})}
+function conn(){const w=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/admin');w.onmessage=e=>upd(JSON.parse(e.data));w.onclose=()=>setTimeout(conn,3000)}
+async function init(){await api('/api/admin/stats');show(true);if(!started){started=true;$('v').src='/stream/admin';conn();setInterval(hist,60000)}hist()}
+init().catch(()=>{});
+</script></body></html>
