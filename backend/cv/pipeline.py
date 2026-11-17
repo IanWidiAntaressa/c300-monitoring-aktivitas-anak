@@ -12,6 +12,7 @@ class Pipeline:
         self._t = None; self._stop = threading.Event()
         self.history_live = deque(maxlen=300); self._acc = []; self._cur_min = None; self.sid = None
         self.votes = {}; self.track_obs = {}; self.excluded = set(); self.static_ex = []
+        self.focus_minutes = 0; self.session_minutes = 0   # durasi fokus papan tulis (menit) dalam sesi berjalan
     def start(self):
         if self.running: return
         self._stop.clear(); self.running = True; self._t = threading.Thread(target=self._run, daemon=True); self._t.start()
@@ -24,7 +25,8 @@ class Pipeline:
         t = self.total
         pct = {k: (round(v*100/t, 1) if t else None) for k, v in self.counts.items()}
         avg_front = (sum(s[0]["depan"] for s in self._acc) / len(self._acc)) if self._acc else 0.0
-        return {"status": self.status, "error": self.error, "total": t, "counts": self.counts, "pct": pct, "avg_front_per_minute": round(avg_front, 2)}
+        return {"status": self.status, "error": self.error, "total": t, "counts": self.counts, "pct": pct, "avg_front_per_minute": round(avg_front, 2),
+                "focus_minutes": self.focus_minutes, "session_minutes": self.session_minutes}
     def _flush(self):
         if not self._acc or self._cur_min is None: return
         n = len(self._acc)
@@ -32,7 +34,11 @@ class Pipeline:
         pcts = {k: (sum(s[0][k] * 100 / s[1] for s in valid) / len(valid) if valid else 0.0) for k in CATS}
         avg_total = sum(s[1] for s in self._acc) / n
         avg_front = sum(s[0]["depan"] for s in self._acc) / n
-        db.save_minute(self._cur_min*60, config.load()["source"]["type"], n, avg_total, avg_front, pcts); self._acc = []
+        cfg = config.load()
+        db.save_minute(self._cur_min*60, cfg["source"]["type"], n, avg_total, avg_front, pcts); self._acc = []
+        # Menit dihitung "fokus" bila rata-rata persentase siswa menghadap depan >= ambang (default 50%)
+        self.session_minutes += 1
+        if valid and pcts["depan"] >= cfg.get("focus_min_pct", 50): self.focus_minutes += 1
     def _open(self, cfg):
         s = cfg["source"]; v = s["value"]
         if s["type"] == "webcam":
@@ -79,6 +85,7 @@ class Pipeline:
         if not cap.isOpened():
             self.error = "Sumber video tidak dapat dibuka"; self.status = "error"; self.running = False; return
         self.track_obs = {}; self.excluded = set(); self.static_ex = []; self.votes = {}
+        self.focus_minutes = 0; self.session_minutes = 0; self._acc = []; self._cur_min = None
         self.error = None; self.status = "running"; self.sid = db.start_session(cfg["source"]["type"]); i = 0
         while not self._stop.is_set():
             ok, frame = cap.read()
