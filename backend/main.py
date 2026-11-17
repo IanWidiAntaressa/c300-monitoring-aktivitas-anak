@@ -11,7 +11,8 @@ cfg = config.load(); db.init(cfg["admin"]["username"], cfg["admin"]["password"])
 app = FastAPI(title="CCTV Monitoring Perhatian Siswa")
 FE = config.ROOT / "frontend"
 def pub_stats():
-    s = pipeline.snapshot(); return {"status": s["status"], "total_available": s["total"] > 0, "avg_front_per_minute": s["avg_front_per_minute"]}
+    s = pipeline.snapshot(); return {"status": s["status"], "total_available": s["total"] > 0, "avg_front_per_minute": s["avg_front_per_minute"],
+                                    "focus_minutes": s["focus_minutes"], "session_minutes": s["session_minutes"]}
 @app.get("/")
 def guest(): return FileResponse(FE / "guest.html")
 @app.get("/admin")

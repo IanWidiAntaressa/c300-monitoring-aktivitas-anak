@@ -2,8 +2,8 @@
   "host": "0.0.0.0",
   "port": 8000,
   "source": {
-    "type": "webcam",
-    "value": "0"
+    "type": "mp4",
+    "value": "videos/classroom.mp4"
   },
   "model_path": "models/yolov8n-pose.pt",
   "person_conf": 0.35,
@@ -16,5 +16,6 @@
   "auto_exclude": true,
   "auto_front_band": 0.5,
   "auto_min_obs": 30,
-  "auto_facing_ratio": 0.8
+  "auto_facing_ratio": 0.8,
+  "focus_min_pct": 50
 }

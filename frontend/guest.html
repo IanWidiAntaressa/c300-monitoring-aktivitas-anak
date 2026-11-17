@@ -1,10 +1,49 @@
-<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CCTV Kelas</title><link rel="stylesheet" href="/static/style.css"></head><body>
-<header><b>CCTV Monitoring Perhatian Siswa</b><a href="/admin">Admin</a></header><main>
-<div class="video"><img id="v" src="/stream/public" alt=""><div class="off" id="off">Kamera tidak aktif</div></div>
-<div class="card"><div class="t">RATA-RATA SISWA MENGHADAP DEPAN PER MENIT</div><div class="big" id="p">Belum tersedia</div></div></main>
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CCTV Kelas</title>
+<script>try{const t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css"></head><body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <symbol id="i-cam" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></symbol>
+ <symbol id="i-board" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="13" rx="2"/><path d="M8 21l4-5 4 5M12 3V1"/></symbol>
+ <symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+ <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+ <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+ <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+ <symbol id="i-auto" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+</svg>
+
+<header class="gtop">
+ <div class="brand"><span class="logo"><svg class="ic"><use href="#i-cam"/></svg></span>CCTV Kelas</div>
+ <div class="right">
+  <div class="seg" role="group" aria-label="Tema">
+   <button data-t="light" aria-label="Tema terang"><svg class="ic"><use href="#i-sun"/></svg></button>
+   <button data-t="auto" aria-label="Tema otomatis"><svg class="ic"><use href="#i-auto"/></svg></button>
+   <button data-t="dark" aria-label="Tema gelap"><svg class="ic"><use href="#i-moon"/></svg></button>
+  </div>
+  <a class="btn sm" href="/admin"><svg class="ic"><use href="#i-lock"/></svg>Admin</a>
+ </div>
+</header>
+<main class="main">
+ <div class="hello"><div><h1>CCTV Monitoring Perhatian Siswa</h1></div><span id="gst" class="chip off">Kamera tidak aktif</span></div>
+ <div class="bento">
+  <div class="stage c8"><img id="v" src="/stream/public" alt=""><div class="idle" id="off"><div><span class="logo"><svg class="ic"><use href="#i-cam"/></svg></span>Kamera tidak aktif</div></div></div>
+  <div class="card hero c4"><div class="card-h"><h2>Fokus Papan Tulis</h2><span class="meta">sesi ini</span></div>
+   <div class="hero-body"><span class="st-ic warn"><svg class="ic"><use href="#i-board"/></svg></span>
+   <div class="cap">DURASI FOKUS </div><div class="bignum" id="p">Belum tersedia</div>
+   <p class="last" id="psub">Menit dengan ≥ 50% siswa menghadap depan</p></div></div>
+ </div>
+</main>
 <script>
-const off=document.getElementById('off'),p=document.getElementById('p');
+const off=document.getElementById('off'),p=document.getElementById('p'),gst=document.getElementById('gst');
 function upd(d){off.style.display=d.status==='running'?'none':'grid';
- const ok=d.status==='running';p.textContent=ok?Number(d.avg_front_per_minute||0).toFixed(1)+' siswa':'Belum tersedia';p.style.fontSize=ok?'56px':'28px'}
+ const ok=d.status==='running';p.textContent=ok?(d.focus_minutes||0)+' Menit':'Belum tersedia';
+ document.getElementById('psub').textContent=ok?`dari ${d.session_minutes||0} menit pemantauan · rata-rata ${Number(d.avg_front_per_minute||0).toFixed(1)} siswa menghadap depan`:'Menit dengan ≥ 50% siswa menghadap papan tulis';p.style.fontSize=ok?"":"28px";
+ gst.textContent=ok?'Kamera aktif':'Kamera tidak aktif';gst.className='chip '+(ok?'ok':'off')}
 function conn(){const w=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/public');w.onmessage=e=>upd(JSON.parse(e.data));w.onclose=()=>setTimeout(conn,2000)}conn();
+function setTheme(t){const r=document.documentElement;if(t==='auto')delete r.dataset.theme;else r.dataset.theme=t;try{localStorage.setItem('theme',t)}catch(e){}
+ document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t))}
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>setTheme(b.dataset.t));
+(()=>{let t='auto';try{t=localStorage.getItem('theme')||'auto'}catch(e){}document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t))})();
 </script></body></html>

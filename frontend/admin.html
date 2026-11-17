@@ -1,40 +1,135 @@
-<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin CCTV</title><link rel="stylesheet" href="/static/style.css">
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin CCTV</title>
+<script>try{const t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script></head><body>
-<header><b>Admin – CCTV Monitoring</b><span><a href="/">Tampilan Guest</a> <button id="lo" onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())" style="display:none">Keluar</button></span></header><main>
-<div id="login" class="card" style="max-width:340px;margin:60px auto"><h3>Login Admin</h3><input id="u" placeholder="Username"><br><input id="pw" type="password" placeholder="Password"><br><button onclick="login()">Masuk</button><div id="err" style="color:#f77"></div></div>
-<div id="app" style="display:none">
-<div class="video"><img id="v"><div class="off" id="off">Kamera tidak aktif</div></div>
-<div class="card"><div class="t">RATA-RATA SISWA MENGHADAP DEPAN PER MENIT</div><div class="big" id="front">–</div><small>Rata-rata jumlah siswa dari sampel pemrosesan pada menit berjalan</small></div>
-<div class="card"><b>Kontrol</b> <span id="st"></span><br>
-<button onclick="ctl('start')">Mulai</button><button onclick="ctl('stop')">Berhenti</button>
-<select id="stype" onchange="sourceTypeChanged()"><option value="webcam" selected>Webcam Laptop</option><option value="mp4">MP4</option><option value="rtsp">RTSP</option></select><input id="sval" value="0" placeholder="Indeks webcam (0), path MP4, atau URL RTSP"><button onclick="setSrc()">Set sumber</button>
-<br>Upload MP4: <input type="file" id="f" accept=".mp4"><button onclick="up()">Upload</button></div>
-<div class="card"><b>Statistik saat ini</b><div class="grid" id="cats"></div></div>
-<div class="card"><b>Grafik (rata-rata per menit)</b><canvas id="ch" height="110"></canvas></div>
-<div class="card"><b>Riwayat</b><br>Dari <input type="date" id="d1"> s/d <input type="date" id="d2"><button onclick="hist()">Filter</button><div style="overflow:auto"><table id="ht"></table></div><b>Sesi rekaman</b><table id="sess"></table></div>
-</div></main>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <symbol id="i-cam" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></symbol>
+ <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></symbol>
+ <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+ <symbol id="i-bars" viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></symbol>
+ <symbol id="i-line" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+ <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></symbol>
+ <symbol id="i-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+ <symbol id="i-board" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="13" rx="2"/><path d="M8 21l4-5 4 5M12 3V1"/></symbol>
+ <symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+ <symbol id="i-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+ <symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></symbol>
+ <symbol id="i-play" viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></symbol>
+ <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
+ <symbol id="i-up" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
+ <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+ <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+ <symbol id="i-auto" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+</svg>
+
+<!-- login -->
+<div id="login" class="login-wrap" style="display:none"><div class="card login-card">
+ <div class="brand"><span class="logo"><svg class="ic"><use href="#i-cam"/></svg></span></div>
+ <h2>Login Admin</h2><p class="sub">CCTV Monitoring Perhatian Siswa</p>
+ <input id="u" placeholder="Username" autocomplete="username"><input id="pw" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
+ <button class="btn pri" onclick="login()">Masuk</button><div id="err" class="err" style="margin-top:8px;text-align:center"></div>
+ <p class="foot"><a href="/">Buka tampilan Guest</a></p>
+</div></div>
+
+<div id="app" style="display:none"><div class="app">
+ <aside class="side" id="side">
+  <div class="brand"><span class="logo"><svg class="ic"><use href="#i-cam"/></svg></span>CCTV Kelas</div>
+  <nav class="nav">
+   <a href="#top" class="on"><svg class="ic"><use href="#i-home"/></svg>Dashboard</a>
+   <a href="#kontrol"><svg class="ic"><use href="#i-sliders"/></svg>Kontrol</a>
+   <a href="#statistik"><svg class="ic"><use href="#i-bars"/></svg>Statistik</a>
+   <a href="#grafik"><svg class="ic"><use href="#i-line"/></svg>Grafik</a>
+   <a href="#riwayat"><svg class="ic"><use href="#i-clock"/></svg>Riwayat</a>
+  </nav>
+  <div class="sfoot">
+   <div class="seg" role="group" aria-label="Tema">
+    <button data-t="light" title="Terang" aria-label="Tema terang"><svg class="ic"><use href="#i-sun"/></svg></button>
+    <button data-t="auto" title="Ikuti sistem" aria-label="Tema otomatis"><svg class="ic"><use href="#i-auto"/></svg></button>
+    <button data-t="dark" title="Gelap" aria-label="Tema gelap"><svg class="ic"><use href="#i-moon"/></svg></button>
+   </div>
+   <div class="who-row"><span class="dot on"></span>Masuk sebagai <b>&nbsp;Admin</b></div>
+   <button id="lo" class="btn sm" onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.reload())" style="display:none"><svg class="ic"><use href="#i-out"/></svg>Keluar</button>
+  </div>
+ </aside>
+ <div class="scrim" id="scrim"></div>
+ <div>
+  <div class="top"><button class="btn sm" id="menu" aria-label="Menu"><svg class="ic"><use href="#i-menu"/></svg></button>CCTV Kelas</div>
+  <main class="main" id="top">
+   <div class="hello">
+    <div><h1>Monitoring Perhatian Siswa</h1>
+    <div class="right"><span id="st" class="chip off">Status: –</span></div>
+   </div>
+
+   <div class="bento">
+    <div class="stage c8"><img id="v" alt=""><div class="idle" id="off"><div><span class="logo"><svg class="ic"><use href="#i-cam"/></svg></span>Kamera tidak aktif</div></div></div>
+    <div class="card hero c4"><div class="card-h"><h2>Fokus Papan Tulis</h2><span class="meta">sesi ini</span></div>
+     <div class="hero-body"><span class="st-ic warn"><svg class="ic"><use href="#i-board"/></svg></span>
+      <div class="cap">DURASI FOKUS </div><div class="bignum" id="front">–</div>
+      <p class="last" id="frontsub">Menit dengan ≥ 50% siswa menghadap papan tulis</p></div></div>
+
+    <div class="card c12" id="kontrol"><div class="card-h"><h2>Kontrol pemrosesan</h2></div>
+     <div class="ctrl-group"><span class="lb">Pemrosesan</span>
+      <button class="btn pri" onclick="ctl('start')"><svg class="ic"><use href="#i-play"/></svg>Mulai</button>
+      <button class="btn bad" onclick="ctl('stop')"><svg class="ic"><use href="#i-stop"/></svg>Berhenti</button></div>
+     <div class="ctrl-group"><span class="lb">Sumber video</span>
+      <select id="stype" onchange="sourceTypeChanged()"><option value="webcam" selected>Webcam Laptop</option><option value="mp4">MP4</option><option value="rtsp">RTSP</option></select>
+      <input id="sval" value="0" placeholder="Indeks webcam (0), path MP4, atau URL RTSP"><button class="btn" onclick="setSrc()">Set sumber</button></div>
+     <div class="ctrl-group"><span class="lb">Upload MP4</span><input type="file" id="f" accept=".mp4"><button class="btn" onclick="up()"><svg class="ic"><use href="#i-up"/></svg>Upload</button></div>
+    </div>
+
+    <div class="card c12" id="statistik"><div class="card-h"><h2>Statistik saat ini</h2><span class="meta">jumlah & persentase per orientasi</span></div><div id="cats"></div></div>
+    <div class="card c12" id="grafik"><div class="card-h"><h2>Grafik (rata-rata per menit)</h2><span class="meta">% per kategori</span></div><div class="chartbox"><canvas id="ch"></canvas></div></div>
+    <div class="card c12" id="riwayat"><div class="card-h"><h2>Riwayat</h2>
+      <div class="row" style="margin:0">Dari <input type="date" id="d1"> s/d <input type="date" id="d2"><button class="btn pri sm" onclick="hist()">Filter</button></div></div>
+     <div class="scroll"><table id="ht"></table></div>
+     <div class="subh">Sesi rekaman</div><div class="scroll"><table id="sess"></table></div></div>
+   </div>
+  </main>
+ </div>
+</div></div>
+
 <script>
 const N={depan:'Menghadap Depan',belakang:'Menghadap Belakang',kanan:'Menghadap Kanan',kiri:'Menghadap Kiri',menunduk:'Menunduk',tidak_diketahui:'Tidak Diketahui'};
 const K=Object.keys(N),$=i=>document.getElementById(i);let chart,started=false;
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const COLS=()=>[css('--acc'),css('--ok'),css('--warn'),css('--bad'),css('--acc2'),css('--mute')];
 async function api(u,o){const r=await fetch(u,o);if(r.status===401){show(false);throw 0}return r.json()}
-function show(on){$('login').style.display=on?'none':'block';$('app').style.display=on?'block':'none';$('lo').style.display=on?'':'none'}
+function show(on){$('login').style.display=on?'none':'grid';$('app').style.display=on?'block':'none';$('lo').style.display=on?'':'none'}
 async function login(){const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('u').value,password:$('pw').value})});
  if(r.ok)init();else $('err').textContent='Login gagal'}
 const ctl=a=>api('/api/admin/control/'+a,{method:'POST'});
 function sourceTypeChanged(){const t=$('stype').value;$('sval').value=t==='webcam'?'0':(t==='mp4'?'videos/classroom.mp4':'rtsp://user:password@alamat-ip:554/stream1');$('sval').placeholder=t==='webcam'?'Indeks webcam: 0 (kamera utama), 1 (kamera lain)':(t==='mp4'?'Path video MP4':'URL RTSP kamera IP');}
 const setSrc=async()=>{const t=$('stype').value;const v=$('sval').value.trim();if(!v){alert('Isi sumber kamera/video terlebih dahulu');return;}const r=await api('/api/admin/source',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:t,value:v})});alert('Sumber diubah ke '+(t==='webcam'?'Webcam laptop indeks '+v:t.toUpperCase())+'. Klik Mulai jika pemrosesan belum berjalan.');};
 async function up(){const fd=new FormData();fd.append('file',$('f').files[0]);await api('/api/admin/upload',{method:'POST',body:fd});alert('Terupload & dipilih')}
-function upd(d){$('st').textContent='Status: '+d.status+(d.error?' – '+d.error:'')+' | Total: '+d.total;$('off').style.display=d.status==='running'?'none':'grid';
- $('front').textContent=d.total?d.avg_front_per_minute.toFixed(1)+' siswa':'Belum tersedia';
- $('cats').innerHTML=K.map(k=>`<div class="card"><div class="t">${N[k]}</div><div style="text-align:center;font-size:24px">${d.counts[k]} siswa<br>${d.pct[k]==null?'–':d.pct[k]+'%'}</div></div>`).join('')}
+function upd(d){$('st').textContent='Status: '+d.status+(d.error?' – '+d.error:'')+' | Total: '+d.total;$('st').className='chip '+(d.error?'bad':(d.status==='running'?'ok':'off'));$('off').style.display=d.status==='running'?'none':'grid';
+ const run=d.status==='running';$('front').textContent=run?(d.focus_minutes||0)+' Menit':'Belum tersedia';$('front').style.fontSize=run?'':'26px';
+ $('frontsub').textContent=run?`dari ${d.session_minutes||0} menit pemantauan · rata-rata ${Number(d.avg_front_per_minute||0).toFixed(1)} siswa menghadap depan`:'Menit dengan ≥ 50% siswa menghadap papan tulis';
+ const c=COLS();$('cats').innerHTML=K.map((k,i)=>`<div class="stat"><span class="l"><span class="sw" style="background:${c[i]}"></span>${N[k]}</span><b>${d.counts[k]} siswa</b><span class="l">${d.pct[k]==null?'–':d.pct[k]+'%'}</span></div>`).join('')}
 const ts=s=>new Date(s*1000).toLocaleString('id-ID');
 async function hist(){let q='';if($('d1').value)q+='start='+Date.parse($('d1').value)/1000+'&';if($('d2').value)q+='end='+(Date.parse($('d2').value)/1000+86399);
  const h=await api('/api/admin/history?'+q),m=h.minutes;
- $('ht').innerHTML='<tr><th>Menit</th><th>Sampel</th><th>Rata2 seluruh siswa</th><th>Rata2 menghadap depan</th>'+K.map(k=>'<th>'+N[k]+' %</th>').join('')+'</tr>'+m.map(r=>`<tr><td>${ts(r.minute_ts)}</td><td>${r.samples}</td><td>${r.avg_total.toFixed(1)}</td><td>${Number(r.avg_front||0).toFixed(1)}</td>`+K.map(k=>`<td>${r['pct_'+k].toFixed(1)}</td>`).join('')+'</tr>').join('');
- $('sess').innerHTML='<tr><th>Mulai</th><th>Durasi</th><th>Sumber</th></tr>'+h.sessions.map(s=>`<tr><td>${ts(s.start_ts)}</td><td>${s.end_ts?Math.round((s.end_ts-s.start_ts)/60)+' mnt':'berjalan'}</td><td>${s.source}</td></tr>`).join('');
- const cols=['#7042b8','#8b63c7','#a58bcf','#593193','#c0afd9','#8b8792'];
- if(chart)chart.destroy();if(window.Chart)chart=new Chart($('ch'),{type:'line',data:{labels:m.map(r=>ts(r.minute_ts)),datasets:K.map((k,i)=>({label:N[k],data:m.map(r=>r['pct_'+k]),borderColor:cols[i],tension:.2}))},options:{scales:{y:{min:0,max:100}}}})}
+ $('ht').innerHTML='<tr><th>Menit</th><th>Sampel</th><th>Rata2 seluruh siswa</th><th>Rata2 menghadap depan</th>'+K.map(k=>'<th>'+N[k]+' %</th>').join('')+'</tr>'+m.map(r=>`<tr><td class="num">${ts(r.minute_ts)}</td><td class="num">${r.samples}</td><td class="num">${r.avg_total.toFixed(1)}</td><td class="num">${Number(r.avg_front||0).toFixed(1)}</td>`+K.map(k=>`<td class="num">${r['pct_'+k].toFixed(1)}</td>`).join('')+'</tr>').join('');
+ $('sess').innerHTML='<tr><th>Mulai</th><th>Durasi</th><th>Sumber</th></tr>'+h.sessions.map(s=>`<tr><td class="num">${ts(s.start_ts)}</td><td>${s.end_ts?Math.round((s.end_ts-s.start_ts)/60)+' mnt':'<span class="chip ok">berjalan</span>'}</td><td>${s.source}</td></tr>`).join('');
+ window._lastHist=m;drawChart(m)}
+function drawChart(m){if(!window.Chart||!m)return;const cols=COLS(),ink=css('--mute'),grid=css('--line');
+ Chart.defaults.font.family='"Plus Jakarta Sans",system-ui,sans-serif';Chart.defaults.color=ink;
+ if(chart)chart.destroy();chart=new Chart($('ch'),{type:'line',data:{labels:m.map(r=>ts(r.minute_ts)),datasets:K.map((k,i)=>({label:N[k],data:m.map(r=>r['pct_'+k]),borderColor:cols[i],backgroundColor:cols[i],borderWidth:k==='depan'?2.5:1.6,pointRadius:0,pointHoverRadius:4,tension:.3}))},
+  options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8,padding:16}}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:8}},y:{min:0,max:100,grid:{color:grid},border:{display:false}}}}})}
 function conn(){const w=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/admin');w.onmessage=e=>upd(JSON.parse(e.data));w.onclose=()=>setTimeout(conn,3000)}
 async function init(){await api('/api/admin/stats');show(true);if(!started){started=true;$('v').src='/stream/admin';conn();setInterval(hist,60000)}hist()}
-init().catch(()=>{});
+init().catch(()=>show(false));
+
+/* tema terang/gelap/otomatis */
+function setTheme(t){const r=document.documentElement;if(t==='auto')delete r.dataset.theme;else r.dataset.theme=t;try{localStorage.setItem('theme',t)}catch(e){}
+ document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t));drawChart(window._lastHist)}
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>setTheme(b.dataset.t));
+(()=>{let t='auto';try{t=localStorage.getItem('theme')||'auto'}catch(e){}document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t))})();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>drawChart(window._lastHist));
+/* sidebar: menu mobile + penanda bagian aktif */
+const side=$('side'),scrim=$('scrim');const tog=o=>{side.classList.toggle('open',o);scrim.classList.toggle('open',o)};
+$('menu').onclick=()=>tog(true);scrim.onclick=()=>tog(false);
+document.querySelectorAll('.nav a[href^="#"]').forEach(a=>a.addEventListener('click',()=>{document.querySelectorAll('.nav a').forEach(x=>x.classList.toggle('on',x===a));tog(false)}));
 </script></body></html>
